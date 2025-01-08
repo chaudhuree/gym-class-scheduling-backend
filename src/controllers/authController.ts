@@ -160,6 +160,7 @@ export const updateTrainer = async (req: Request, res: Response, next: NextFunct
   }
 };
 
+// Login user
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
@@ -215,6 +216,55 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
       statusCode: 200,
       message: 'Logged out successfully',
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update Password (logged in user only)
+export const updatePassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!oldPassword || !newPassword) {
+      throw new AppError('Old password and new password are required', 400);
+    }
+
+    // Find user
+    const user = await prisma.user.findUnique({ where: { id: req.user?.userId } });
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    // Verify old password
+    const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isPasswordValid) {
+      throw new AppError('Invalid old password', 401);
+    } else {
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      // Update password
+      const updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+        },
+      });
+
+      return res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: 'Password updated successfully',
+        data: { user: updatedUser },
+      });
+    }
   } catch (error) {
     next(error);
   }

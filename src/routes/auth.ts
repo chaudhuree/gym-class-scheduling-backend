@@ -4,7 +4,8 @@ import {
   login, 
   logout,
   registerTrainer,
-  updateTrainer
+  updateTrainer,
+  updatePassword
 } from '../controllers/authController';
 import { authenticate, authorize } from '../middleware/auth';
 
@@ -19,4 +20,6 @@ router.post('/logout', authenticate, logout);
 router.post('/trainer/register', authenticate, authorize('ADMIN'), registerTrainer);
 router.put('/trainer/:trainerId', authenticate, authorize('ADMIN'), updateTrainer);
 
+// Protected routes
+router.put('/change-password', authenticate, updatePassword);
 export default router;
