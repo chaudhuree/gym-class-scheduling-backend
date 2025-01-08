@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 
 export class AppError extends Error {
   statusCode: number;
@@ -11,21 +12,85 @@ export class AppError extends Error {
 }
 
 export const errorHandler = (
-  err: Error | AppError,
+  err: Error | AppError | PrismaClientKnownRequestError | PrismaClientValidationError,
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
+  console.error('Error:', err);
+
+  // Handle AppError
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
-      status: 'error',
-      message: err.message
+      success: false,
+      message: err.message,
+      statusCode: err.statusCode
     });
   }
 
-  console.error('Error:', err);
+  // Handle Prisma Errors
+  if (err instanceof PrismaClientKnownRequestError) {
+    // Handle specific Prisma errors
+    switch (err.code) {
+      case 'P2002': // Unique constraint violation
+        return res.status(400).json({
+          success: false,
+          message: 'A record with this value already exists',
+          statusCode: 400
+        });
+      case 'P2025': // Record not found
+        return res.status(404).json({
+          success: false,
+          message: 'Record not found',
+          statusCode: 404
+        });
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Database operation failed',
+          statusCode: 400
+        });
+    }
+  }
+
+  if (err instanceof PrismaClientValidationError) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid data provided',
+      statusCode: 400
+    });
+  }
+
+  // Handle validation errors
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+      statusCode: 400
+    });
+  }
+
+  // Handle JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token',
+      statusCode: 401
+    });
+  }
+
+  if (err.name === 'TokenExpiredError') {
+    return res.status(401).json({
+      success: false,
+      message: 'Token expired',
+      statusCode: 401
+    });
+  }
+
+  // Default error
   return res.status(500).json({
-    status: 'error',
-    message: 'Internal server error'
+    success: false,
+    message: 'Internal server error',
+    statusCode: 500
   });
 };

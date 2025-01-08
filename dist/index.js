@@ -16,6 +16,10 @@ const port = process.env.PORT || 3000;
 // Middleware
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+// default route
+app.get('/', (req, res) => {
+    res.send('Gym Class Scheduling and Membership Management System');
+});
 // Routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/schedules', schedules_1.default);
