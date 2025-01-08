@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
+import { Prisma, Role } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
@@ -265,6 +266,160 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
         data: { user: updatedUser },
       });
     }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update Profile (logged in trainee or admin) 
+export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name, email } = req.body;
+
+    // Find user
+    const user = await prisma.user.findUnique({ where: { id: req.user?.userId } });
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    // Check if new email already exists
+    if (email && email !== user.email) {
+      const emailExists = await prisma.user.findUnique({ where: { email } });
+      if (emailExists) {
+        throw new AppError('Email already in use', 400);
+      }
+    }
+    // Update profile
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        name: name || user.name,
+        email: email || user.email,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: 'Profile updated successfully',
+      data: { user: updatedUser },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete user (admin only)
+export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.params;
+
+    // Find user
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    // Delete user
+    await prisma.user.delete({ where: { id: userId } });
+
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: 'User deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get all users with pagination and optional role filter (admin only)
+export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { role, page = 1, limit = 10 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    // Build where clause based on role, ensuring type safety
+    const whereClause = role ? { 
+      role: role.toString().toUpperCase() as Role // Cast to Role enum
+    } : {};
+
+    const [users, count] = await Promise.all([
+      prisma.user.findMany({
+        where: whereClause as Prisma.UserWhereInput, // Cast to proper Prisma type
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: Number(limit),
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      }),
+      prisma.user.count({ where: whereClause as Prisma.UserWhereInput })
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: `Users${role ? ` with role ${role}` : ''} fetched successfully`,
+      data: { users, count }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get User by ID
+export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.params;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: 'User fetched successfully',
+      data: { user },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get logged in user
+export const getLoggedInUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user?.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        password: false,
+      },
+    });
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: 'User fetched successfully',
+      data: { user },
+    });
   } catch (error) {
     next(error);
   }
