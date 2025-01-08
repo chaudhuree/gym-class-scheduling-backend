@@ -2,13 +2,18 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 
+// Create booking (for TRAINEE)
 export const createBooking = async (req: Request, res: Response) => {
   try {
     const { scheduleId } = req.body;
     const traineeId = req.user?.userId;
 
     if (!traineeId) {
-      throw new AppError('User not authenticated', 401);
+      return res.status(401).json({
+        success: false,
+        statusCode: 401,
+        message: 'User not authenticated'
+      });
     }
 
     // Check if schedule exists and get its time details
@@ -20,12 +25,20 @@ export const createBooking = async (req: Request, res: Response) => {
     });
 
     if (!schedule) {
-      throw new AppError('Schedule not found', 404);
+      return res.status(404).json({
+        success: false,
+        statusCode: 404,
+        message: 'Schedule not found'
+      });
     }
 
     // Check booking limit
     if (schedule.bookings.length >= 10) {
-      throw new AppError('Class schedule is full. Maximum 10 trainees allowed per schedule.', 400);
+      return res.status(400).json({
+        success: false,
+        statusCode: 400,
+        message: 'Class schedule is full. Maximum 10 trainees allowed per schedule.'
+      });
     }
 
     // Check for time conflict
@@ -44,7 +57,11 @@ export const createBooking = async (req: Request, res: Response) => {
     });
 
     if (conflictingBooking) {
-      throw new AppError('You already have a booking during this time slot', 400);
+      return res.status(400).json({
+        success: false,
+        statusCode: 400,
+        message: 'You already have a booking during this time slot'
+      });
     }
 
     // Create the booking
@@ -82,11 +99,24 @@ export const createBooking = async (req: Request, res: Response) => {
       data: booking,
     });
   } catch (error) {
-    if (error instanceof AppError) throw error;
-    throw new AppError('Error booking class', 500);
+    console.error('Create Booking Error:', error);
+    
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        statusCode: error.statusCode,
+        message: error.message,
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      statusCode: 500,
+      message: 'Unexpected error occurred while booking class',
+    });
   }
 };
-
+// Cancel booking (for TRAINEE)
 export const cancelBooking = async (req: Request, res: Response) => {
   try {
     const { bookingId } = req.params;
@@ -121,7 +151,7 @@ export const cancelBooking = async (req: Request, res: Response) => {
     throw new AppError('Error cancelling booking', 500);
   }
 };
-
+// Get bookings (for TRAINEE)
 export const getTraineeBookings = async (req: Request, res: Response) => {
   try {
     const traineeId = req.user?.userId;

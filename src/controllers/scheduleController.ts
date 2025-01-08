@@ -196,12 +196,7 @@ export const getSchedules = async (req: Request, res: Response) => {
             email: true,
           },
         },
-        bookings: {
-          select: {
-            id: true,
-            traineeId: true,
-          },
-        },
+        bookings: true // Include all bookings to get accurate count
       },
       orderBy: {
         startTime: 'asc'
@@ -210,24 +205,33 @@ export const getSchedules = async (req: Request, res: Response) => {
       take: limit
     });
 
-    // Format schedules with moment
-    const formattedSchedules = schedules.map(schedule => ({
-      _id: schedule.id,
-      startTime: {
-        time: moment(schedule.startTime).format('h:mm A'),
-        date: moment(schedule.startTime).format('YYYY-MM-DD')
-      },
-      endTime: {
-        time: moment(schedule.endTime).format('h:mm A'),
-        date: moment(schedule.endTime).format('YYYY-MM-DD')
-      },
-      trainer: schedule.trainer,
-      maxTrainees: schedule.maxTrainees,
-      currentBookings: schedule.bookings.length,
-      availableSlots: schedule.maxTrainees - schedule.bookings.length,
-      isPast: moment(schedule.endTime).isBefore(new Date()),
-      createdAt: moment(schedule.createdAt).format(),
-      updatedAt: moment(schedule.updatedAt).format()
+    // Format schedules with moment and calculate bookings
+    const formattedSchedules = await Promise.all(schedules.map(async schedule => {
+      // Get current bookings count for this specific schedule
+      const currentBookings = await prisma.booking.count({
+        where: {
+          classScheduleId: schedule.id
+        }
+      });
+
+      return {
+        _id: schedule.id,
+        startTime: {
+          time: moment(schedule.startTime).format('h:mm A'),
+          date: moment(schedule.startTime).format('YYYY-MM-DD')
+        },
+        endTime: {
+          time: moment(schedule.endTime).format('h:mm A'),
+          date: moment(schedule.endTime).format('YYYY-MM-DD')
+        },
+        trainer: schedule.trainer,
+        maxTrainees: schedule.maxTrainees,
+        currentBookings,
+        availableSlots: schedule.maxTrainees - currentBookings,
+        isPast: moment(schedule.endTime).isBefore(new Date()),
+        createdAt: moment(schedule.createdAt).format(),
+        updatedAt: moment(schedule.updatedAt).format()
+      };
     }));
 
     // Calculate pagination info
@@ -267,7 +271,6 @@ export const getSchedules = async (req: Request, res: Response) => {
     });
   }
 };
-
 // Get trainer schedules
 export const getTrainerSchedules = async (req: Request, res: Response) => {
   try {
@@ -290,12 +293,7 @@ export const getTrainerSchedules = async (req: Request, res: Response) => {
     const schedules = await prisma.classSchedule.findMany({
       where: { trainerId },
       include: {
-        bookings: {
-          select: {
-            id: true,
-            traineeId: false,
-          },
-        }
+        bookings: true // Include all bookings to get accurate count
       },
       orderBy: {
         startTime: 'asc'
@@ -304,23 +302,32 @@ export const getTrainerSchedules = async (req: Request, res: Response) => {
       take: limit
     });
 
-    // Format schedules with moment
-    const formattedSchedules = schedules.map(schedule => ({
-      _id: schedule.id,
-      startTime: {
-        time: moment(schedule.startTime).format('h:mm A'),
-        date: moment(schedule.startTime).format('YYYY-MM-DD')
-      },
-      endTime: {
-        time: moment(schedule.endTime).format('h:mm A'),
-        date: moment(schedule.endTime).format('YYYY-MM-DD')
-      },
-      maxTrainees: schedule.maxTrainees,
-      currentBookings: schedule.bookings.length,
-      availableSlots: schedule.maxTrainees - schedule.bookings.length,
-      isPast: moment(schedule.endTime).isBefore(new Date()),
-      createdAt: moment(schedule.createdAt).format(),
-      updatedAt: moment(schedule.updatedAt).format()
+    // Format schedules with moment and calculate bookings
+    const formattedSchedules = await Promise.all(schedules.map(async schedule => {
+      // Get current bookings count for this specific schedule
+      const currentBookings = await prisma.booking.count({
+        where: {
+          classScheduleId: schedule.id
+        }
+      });
+
+      return {
+        _id: schedule.id,
+        startTime: {
+          time: moment(schedule.startTime).format('h:mm A'),
+          date: moment(schedule.startTime).format('YYYY-MM-DD')
+        },
+        endTime: {
+          time: moment(schedule.endTime).format('h:mm A'),
+          date: moment(schedule.endTime).format('YYYY-MM-DD')
+        },
+        maxTrainees: schedule.maxTrainees,
+        currentBookings,
+        availableSlots: schedule.maxTrainees - currentBookings,
+        isPast: moment(schedule.endTime).isBefore(new Date()),
+        createdAt: moment(schedule.createdAt).format(),
+        updatedAt: moment(schedule.updatedAt).format()
+      };
     }));
 
     // Calculate pagination info
