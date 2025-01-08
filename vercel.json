@@ -2,9 +2,15 @@
     "version": 2,
     "name": "gym-class-scheduling",
     "builds": [
-        { "src": "dist/index.js", "use": "@vercel/node" }
+        {
+            "src": "src/index.ts",
+            "use": "@vercel/node"
+        }
     ],
     "routes": [
-        { "src": "/(.*)", "dest": "dist/index.js" }
+        {
+            "src": "/(.*)",
+            "dest": "src/index.ts"
+        }
     ]
 }
