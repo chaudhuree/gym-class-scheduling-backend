@@ -1,3 +1,4 @@
+import moment from 'moment';
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
@@ -152,9 +153,13 @@ export const cancelBooking = async (req: Request, res: Response) => {
   }
 };
 // Get bookings (for TRAINEE)
+
 export const getTraineeBookings = async (req: Request, res: Response) => {
   try {
     const traineeId = req.user?.userId;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
 
     if (!traineeId) {
       throw new AppError('User not authenticated', 401);
@@ -175,13 +180,41 @@ export const getTraineeBookings = async (req: Request, res: Response) => {
           },
         },
       },
+      skip,
+      take: limit,
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
+
+    const formattedBookings = await Promise.all(
+      bookings.map(async (booking) => {
+        const startTime = moment(booking.classSchedule.startTime).format('h:mm A');
+        const endTime = moment(booking.classSchedule.endTime).format('h:mm A');
+        const date = moment(booking.classSchedule.startTime).format('YYYY-MM-DD');
+
+        return {
+          ...booking,
+          classSchedule: {
+            ...booking.classSchedule,
+            startTime,
+            endTime,
+            date,
+          },
+        };
+      })
+    );
 
     return res.status(200).json({
       success: true,
       statusCode: 200,
       message: 'Bookings retrieved successfully',
-      data: bookings,
+      data: formattedBookings,
+      meta: {
+        page,
+        limit,
+        total: await prisma.booking.count({ where: { traineeId } }),
+      },
     });
   } catch (error) {
     if (error instanceof AppError) throw error;
