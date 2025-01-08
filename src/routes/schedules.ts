@@ -6,6 +6,7 @@ const router = express.Router();
 
 // Admin routes
 router.post('/', authenticate, authorize('ADMIN'), createSchedule);
+// Protected routes (for TRAINEE)
 router.get('/', authenticate, getSchedules);
 
 // Trainer routes
