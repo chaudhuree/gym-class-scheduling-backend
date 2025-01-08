@@ -72,8 +72,17 @@ type Booking = {
 | Method | Endpoint | Description | Access |
 |--------|----------|-------------|---------|
 | POST | `/auth/register` | Register new user | Public |
+| POST | `/auth/trainer/register` | Register new trainer | Admin |
 | POST | `/auth/login` | User login | Public |
-| GET | `/auth/users` | Get all users | Admin |
+| GET | `/auth/users?role=ADMIN` | Get all users | Admin |
+| GET | `/auth/users?role=TRAINER` | Get all trainers | Admin |
+| GET | `/auth/users?role=TRAINEE` | Get all trainees | Admin |
+| GET | `/auth/profile` | Get user profile | Authenticated |
+| PUT | `/auth/change-password` | Update user password | Authenticated |
+| PUT | `/auth/update-profile` | Update user profile | Authenticated |
+| PUT | `/auth/trainer/:trainerId` | Update trainer | Admin |
+| DELETE | `/auth/user/:userId` | Delete user | Admin |
+| GET | `/auth/user/:userId` | Get user by ID | Admin |
 | GET | `/auth/profile` | Get user profile | Authenticated |
 
 ### Schedules
@@ -89,8 +98,8 @@ type Booking = {
 | Method | Endpoint | Description | Access |
 |--------|----------|-------------|---------|
 | POST | `/bookings` | Create booking | Trainee |
-| GET | `/bookings` | Get user's bookings | Trainee |
-| DELETE | `/bookings/:id` | Cancel booking | Trainee |
+| GET | `/bookings/my-bookings` | Get user's bookings | Trainee |
+| DELETE | `/bookings/:bookingId` | Cancel booking | Trainee |
 
 ## **Business Rules**
 
@@ -194,4 +203,4 @@ npm start
 https://documenter.getpostman.com/view/20773865/2sAYJAfy9b
 
 ### **Live Hosting Link:**
-https://gym-class-scheduling-backend.vercel.app
+https://gym-class-scheduling-backend.vercel.app/api
