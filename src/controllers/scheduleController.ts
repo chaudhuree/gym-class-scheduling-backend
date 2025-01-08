@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 import moment from 'moment';
 
+// Create schedule
 export const createSchedule = async (req: Request, res: Response) => {
   try {
     const { startTime, trainerId } = req.body;
@@ -175,8 +176,17 @@ export const createSchedule = async (req: Request, res: Response) => {
   }
 };
 
+// Get all schedules
 export const getSchedules = async (req: Request, res: Response) => {
   try {
+    // Pagination parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get total count
+    const totalCount = await prisma.classSchedule.count();
+
     const schedules = await prisma.classSchedule.findMany({
       include: {
         trainer: {
@@ -193,32 +203,72 @@ export const getSchedules = async (req: Request, res: Response) => {
           },
         },
       },
+      orderBy: {
+        startTime: 'asc'
+      },
+      skip,
+      take: limit
     });
 
     // Format schedules with moment
     const formattedSchedules = schedules.map(schedule => ({
       _id: schedule.id,
-      startTime: moment(schedule.startTime).format('h:mm A'),
-      endTime: moment(schedule.endTime).format('h:mm A'),
+      startTime: {
+        time: moment(schedule.startTime).format('h:mm A'),
+        date: moment(schedule.startTime).format('YYYY-MM-DD')
+      },
+      endTime: {
+        time: moment(schedule.endTime).format('h:mm A'),
+        date: moment(schedule.endTime).format('YYYY-MM-DD')
+      },
       trainer: schedule.trainer,
       maxTrainees: schedule.maxTrainees,
       currentBookings: schedule.bookings.length,
+      availableSlots: schedule.maxTrainees - schedule.bookings.length,
+      isPast: moment(schedule.endTime).isBefore(new Date()),
       createdAt: moment(schedule.createdAt).format(),
-      updatedAt: moment(schedule.updatedAt).format(),
+      updatedAt: moment(schedule.updatedAt).format()
     }));
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalCount / limit);
 
     return res.status(200).json({
       success: true,
       statusCode: 200,
       message: 'Schedules retrieved successfully',
-      data: formattedSchedules,
+      data: {
+        schedules: formattedSchedules,
+        meta: {
+          currentPage: page,
+          itemsPerPage: limit,
+          totalItems: totalCount,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1
+        }
+      }
     });
   } catch (error) {
     console.error('Get Schedules Error:', error);
-    throw new AppError('Error retrieving schedules', 500);
+    
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        statusCode: error.statusCode,
+        message: error.message,
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      statusCode: 500,
+      message: 'Unexpected error occurred while retrieving schedules',
+    });
   }
 };
 
+// Get trainer schedules
 export const getTrainerSchedules = async (req: Request, res: Response) => {
   try {
     if (!req.user) {

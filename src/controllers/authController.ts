@@ -372,7 +372,16 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
       success: true,
       statusCode: 200,
       message: `Users${role ? ` with role ${role}` : ''} fetched successfully`,
-      data: { users, count }
+      data: { users, 
+        meta:{
+          currentPage: Number(page),
+          itemsPerPage: Number(limit),
+          totalItems: count,
+          totalPages: Math.ceil(count / Number(limit)),
+          hasNext: Number(page) < Math.ceil(count / Number(limit)),
+          hasPrevious: Number(page) > 1
+        }
+       }
     });
   } catch (error) {
     next(error);
