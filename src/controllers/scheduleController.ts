@@ -9,6 +9,10 @@ export const createSchedule = async (req: Request, res: Response) => {
 
     // Convert startTime to Date, ensuring it uses the exact input time
     const scheduleDate = new Date(startTime);
+    // Check if startTime is not past
+    if (scheduleDate < new Date()) {
+      throw new AppError('Start time cannot be in the past', 400);
+    }
     
     // Calculate end time exactly 2 hours from start time
     const endTime = new Date(scheduleDate.getTime() + 2 * 60 * 60 * 1000);
