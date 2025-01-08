@@ -1,0 +1,167 @@
+## Gym Class Scheduling and Membership Management System
+
+Every time you choose to apply a rule(s), explicitly state the rule(s) in the output. You can - abbreviate the rule description to a single word or phrase.
+
+## Project Context
+
+The Gym Class Scheduling and Membership Management System is designed to manage gym operations efficiently. The system defines three roles: Admin, Trainer, and Trainee, each with specific permissions. Admins are responsible for creating and managing trainers, scheduling classes, and assigning trainers to these schedules. Each day can have a maximum of five class schedules, with each class lasting two hours. Trainers conduct the classes and can view their assigned class schedules but cannot create new schedules or manage trainee profiles. Trainees can create and manage their own profiles and book class schedules if there is availability, with a maximum of ten trainees per schedule.
+
+The system enforces several business rules to ensure smooth operations. Admins are limited to scheduling a maximum of 5 classes per day, and each schedule can accommodate no more than 10 trainees. If a class schedule reaches its capacity, trainees will be prevented from making further bookings, and admins cannot create additional schedules beyond the daily limit. JWT-based authentication is implemented to control access, ensuring that only authorized users can perform specific actions, such as booking classes or managing trainers. Robust error handling is integrated throughout the system, addressing issues such as unauthorized access, validation errors, and booking limit violations. This system provides an organized and flexible solution for managing gym class scheduling and membership, with well-defined roles and responsibilities.
+
+## Business Rules:
+- Class Scheduling:
+    - Each day is limited to a maximum of 5 class schedules.
+    - Each class schedule lasts for 2 hours.
+    - The system enforces a maximum of 10 trainees per class schedule. Once the limit is reached, no additional bookings can be made for that schedule.
+    - Admins are responsible for scheduling classes and assigning trainers.
+- Booking System:
+    - Trainees can book class schedules if the schedule has available slots (maximum of 10 trainees per schedule).
+    - A trainee cannot book multiple classes in the same time slot.
+    - Trainees can cancel their bookings if needed.
+
+
+## Code Style and Structure
+
+- Write concise, technical TypeScript code with accurate examples
+- Use functional and declarative programming patterns; avoid classes
+- Prefer iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
+- Use Modular Patterns
+- Structure repository files as follows:
+
+```
+  server/
+  src/
+  components/ # Shared React components
+  hooks/      # Custom React hooks
+  utils/      # Helper functions
+  types/      # TypeScript types
+  lib/        # Shared libraries
+  extension/
+  src/
+  background/ # Service worker scripts
+  content/    # Content scripts
+  popup/      # Extension popup UI
+  options/    # Extension options page
+```
+
+## Syntax and Formatting
+
+- Use "function" keyword for pure functions
+- Avoid unnecessary curly braces in conditionals
+- Use declarative JSX
+- Implement proper TypeScript discriminated unions for message types
+
+## UI and Styling
+
+- Use Shadcn UI and Radix for components
+- use `npx shadcn@latest add <component-name>` to add new shadcn components
+- Implement Tailwind CSS for styling
+- Consider extension-specific constraints (popup dimensions, permissions)
+- Follow Material Design guidelines for Chrome extensions
+- When adding new shadcn component, document the installation command
+
+## Project Context
+
+Server and Chrome extension for automating visa application slot booking process that:
+
+- auto fills the visa application form
+- auto checks for appointment availability
+- auto books the appointment
+
+## Tech Stack
+
+- Programming Language: Typescript
+- Web Framework: Express.js
+- ORM or ODM: Prisma
+- Database: MongoDB
+- Authentication: JWT (JSON Web Tokens)
+
+
+## Naming Conventions
+
+- Use lowercase with dashes for directories (e.g., components/form-wizard)
+- Favor named exports for components and utilities
+- Use PascalCase for component files (e.g., VisaForm.tsx)
+- Use camelCase for utility files (e.g., formValidator.ts)
+
+## TypeScript Usage
+
+- Use TypeScript for all code; prefer interfaces over types
+- Avoid enums; use const objects with 'as const' assertion
+- Use functional components with TypeScript interfaces
+- Define strict types for message passing between different parts of the extension
+- Use absolute imports for all files @/...
+- Avoid try/catch blocks unless there's good reason to translate or handle error in that abstraction
+- Use explicit return types for all functions
+
+
+## Performance Optimization
+
+- Minimize bundle size using code splitting
+- Implement proper lazy loading for non-critical components
+- Optimize content script injection
+- Use proper caching strategies
+- Implement proper cleanup for event listeners and observers
+
+## Security
+
+- Implement Content Security Policy
+- Sanitize user inputs
+- Handle sensitive data properly
+- Follow Chrome extension security best practices
+- Implement proper CORS handling
+
+## Documentation
+
+- Maintain clear README with setup instructions
+- Document API interactions and data flows
+- Keep manifest.json well-documented
+- Include comments for complex logic
+- Document permission requirements
+
+## Error Handling
+
+Implement proper error handling throughout the application. Use global error handling middleware to catch and handle errors, providing appropriate error responses with status codes and error messages.
+### Unauthorized Access: Users who attempt actions without proper authentication or authorization will receive an "Unauthorized access" error.
+### Validation Errors: Input validation will ensure that all required fields are provided, and if any data is invalid (e.g., incorrect email format), appropriate validation errors will be returned.
+### Class Booking Limit Exceeded: If a trainee attempts to book a class that has already reached the maximum of 10 attendees, the system will return an error message indicating that the schedule is full.
+### Schedule Limit: Admins attempting to create more than 5 schedules per day will receive an error.
+#### Sample Error Response:
+- For Validation Errors:
+{
+    "success": false,
+    "message": "Validation error occurred.",
+    "errorDetails": {
+        "field": "email",
+        "message": "Invalid email format."
+    }
+}
+
+- Unauthorized Access:
+{
+    "success": false,
+    "message": "Unauthorized access.",
+    "errorDetails": "You must be an admin to perform this action."
+}
+
+- Booking Limit Exceeded:
+{
+    "success": false,
+    "message": "Class schedule is full. Maximum 10 trainees allowed per schedule."
+}
+
+
+
+
+
+
+- Success Response:
+{
+    "success": true,
+    "statusCode": 201,
+    "message": "Class booked successfully"
+      "Data":[display the response data]
+}
+
+
