@@ -360,3 +360,163 @@ export const getTrainerSchedules = async (req: Request, res: Response) => {
     });
   }
 };
+
+// Delete schedule
+export const deleteSchedule = async (req: Request, res: Response) => {
+  try {
+    const scheduleId = req.params.id;
+    // check if schedule exists
+    const schedule = await prisma.classSchedule.findUnique({ where: { id: scheduleId } });
+    if (!schedule) {
+      throw new AppError('Schedule not found', 404);
+    }
+    await prisma.classSchedule.delete({
+      where: { id: scheduleId },
+    });
+
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: 'Schedule deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete Schedule Error:', error);
+    
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        statusCode: error.statusCode,
+        message: error.message,
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      statusCode: 500,
+      message: 'Unexpected error occurred while deleting schedule',
+    });
+  }
+};
+
+// Update schedule
+export const updateSchedule = async (req: Request, res: Response) => {
+  try {
+    const scheduleId = req.params.id;
+    const { startTime } = req.body;
+
+    if (startTime) {
+      const startTimeDate = new Date(startTime);
+      // Validate if start time is in the past
+      if (startTimeDate < new Date()) {
+        throw new AppError('Start time cannot be in the past', 400);
+      }
+
+      // Calculate end time (2 hours after start time)
+      const endTimeDate = new Date(startTimeDate.getTime() + 2 * 60 * 60 * 1000);
+
+      // Check for overlapping schedules
+      const existingSchedule = await prisma.classSchedule.findFirst({
+        where: {
+          AND: [
+            { id: { not: scheduleId } }, // Exclude current schedule
+            {
+              OR: [
+                // New schedule starts during an existing schedule
+                {
+                  AND: [
+                    { startTime: { lte: startTimeDate } },
+                    { endTime: { gt: startTimeDate } }
+                  ]
+                },
+                // New schedule ends during an existing schedule
+                {
+                  AND: [
+                    { startTime: { lt: endTimeDate } },
+                    { endTime: { gte: endTimeDate } }
+                  ]
+                },
+                // New schedule completely contains an existing schedule
+                {
+                  AND: [
+                    { startTime: { gte: startTimeDate } },
+                    { endTime: { lte: endTimeDate } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      });
+
+      if (existingSchedule) {
+        throw new AppError('Schedule overlaps with an existing schedule', 400);
+      }
+
+      // Add end time to request body
+      req.body.endTime = endTimeDate;
+    }
+    
+    const updatedSchedule = await prisma.classSchedule.update({
+      where: { id: scheduleId },
+      data: req.body,
+      include: {
+        trainer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        bookings: {
+          select: {
+            id: true,
+            traineeId: true,
+          },
+        },
+      },
+    });
+
+    // Format the response
+    const formattedSchedule = {
+      _id: updatedSchedule.id,
+      startTime: {
+        time: moment(updatedSchedule.startTime).format('h:mm A'),
+        date: moment(updatedSchedule.startTime).format('YYYY-MM-DD')
+      },
+      endTime: {
+        time: moment(updatedSchedule.endTime).format('h:mm A'),
+        date: moment(updatedSchedule.endTime).format('YYYY-MM-DD')
+      },
+      trainer: updatedSchedule.trainer,
+      maxTrainees: updatedSchedule.maxTrainees,
+      currentBookings: updatedSchedule.bookings.length,
+      availableSlots: updatedSchedule.maxTrainees - updatedSchedule.bookings.length,
+      isPast: moment(updatedSchedule.endTime).isBefore(new Date()),
+      createdAt: moment(updatedSchedule.createdAt).format(),
+      updatedAt: moment(updatedSchedule.updatedAt).format()
+    };
+
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: 'Schedule updated successfully',
+      data: formattedSchedule,
+    });
+  } catch (error) {
+    console.error('Update Schedule Error:', error);
+    
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        statusCode: error.statusCode,
+        message: error.message,
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      statusCode: 500,
+      message: 'Unexpected error occurred while updating schedule',
+    });
+  }
+};
